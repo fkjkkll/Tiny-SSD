@@ -1,0 +1,12 @@
+.idea
+
+*.png
+*.jpg
+*.xml
+*.txt
+*.pt
+
+__pycache__/
+
+!VOCdevkit/test.jpg
+!model_data/*.txt
