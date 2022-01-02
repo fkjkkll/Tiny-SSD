@@ -54,7 +54,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5, obje
     :param nms_threshold: NMS阈值
     :param object_threshold: 预设的认为是目标的阈值
     :param max_object_num: 预设的最大输出目标数量
-    :return: (bs, max_object_num, 10) class conf minx miny maxx maxy aminx aminy amaxx amaxy
+    :return: (bs, max_object_num, 10) class conf minx miny maxx maxy aminx aminy amaxx amaxy 除了类别都是0~1
     """
     device, batch_size = cls_probs.device, cls_probs.shape[0]
     num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]

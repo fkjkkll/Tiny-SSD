@@ -3,7 +3,7 @@ Auther: lee
 Date: 2021/12/28
 Time: 14:00:27
 """
-
+import torch.optim.lr_scheduler
 from tqdm import tqdm
 from utils.tools import *
 from utils.dataLoader import MyDataSet, dataset_collate
@@ -20,31 +20,30 @@ sizes = get_anchor_info('model_data/anchor_sizes.txt')
 ratios = get_anchor_info('model_data/anchor_ratios.txt')
 if len(sizes) != len(ratios): ratios = [ratios[0]] * len(sizes)
 anchors_perpixel = len(sizes[0]) + len(ratios[0]) - 1
-feature_map = [32,16,8,4,1]
-anchors = generate_anchors(feature_map, sizes, ratios)
+anchors = generate_anchors([32,16,8,4,1], sizes, ratios)
 
 # -----------------------------------------------
 #                   加载数据
 # -----------------------------------------------
-input_shape = 256
 _, num_classes = get_classes('model_data/voc_classes.txt')
 with open('2077_train.txt') as f:
     train_lines = f.readlines()
-train_dataset = MyDataSet(train_lines, input_shape, mode='train')
+train_dataset = MyDataSet(train_lines, 256, mode='train')
 train_iter = DataLoader(train_dataset, batch_size=8, shuffle=True,
                           pin_memory=True, drop_last=True, collate_fn=dataset_collate)
+
 
 # -----------------------------------------------
 #                   网络部分
 # -----------------------------------------------
 device, net = try_gpu(), TinySSD(anchors_perpixel=anchors_perpixel, num_classes=1)
 trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
-scheduler_lr = torch.optim.lr_scheduler.CosineAnnealingLR(trainer, 10, 0.0001)
+scheduler_lr = torch.optim.lr_scheduler.StepLR(trainer, step_size=80, gamma=0.5)
 
 # -----------------------------------------------
 #                   开始训练
 # -----------------------------------------------
-num_epochs, timer = 30, Timer()
+num_epochs, timer = 500, Timer()
 timer.start()
 animator = Animator(xlabel='epoch', xlim=[1, num_epochs], legend=['class error', 'bbox mae'])
 net = net.to(device)
@@ -70,7 +69,10 @@ for epoch in range(num_epochs):
         trainer.step()
         metric.add(cls_eval(cls_preds, cls_labels), 1, bbox_eval(bbox_preds, bbox_labels, bbox_masks), 1)
 
+    # 学习率衰减
     scheduler_lr.step()
+
+    # 留作显示
     cls_loss, bbox_loss = metric[0] / metric[1], metric[2] / metric[3]
     animator.add(epoch + 1, (cls_loss, bbox_loss))
     print(f'epoch {epoch+1}/{num_epochs}: ', 'cls-loss: ',metric[0] / metric[1], ' box-loss', metric[2] / metric[3])

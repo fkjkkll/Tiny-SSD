@@ -78,6 +78,14 @@ class MyDataSet(Dataset):
             x[x < 0] = 0
             image_data = cv2.cvtColor(x, cv2.COLOR_HSV2RGB)
 
+            # ------------------------------------------#
+            #                  通道混洗
+            # ------------------------------------------#
+            channels = [0, 1, 2]
+            np.random.shuffle(channels)
+            image_data[:] = image_data[..., channels]
+
+
         _transform = transforms.Compose([
             transforms.ToTensor(),  # PIL int -> tensor[0~1] 浮点不归一化
         ])

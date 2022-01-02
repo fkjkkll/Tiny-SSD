@@ -70,7 +70,7 @@ def img_preprocessing(_img):
 def show_bboxes(axes, bboxes, labels=None, colors=None):
     """ 在子图中绘制锚框 xmin xmax ymin ymax
     :param axes: 传来的画布
-    :param bboxes: (num_anchors, 4)
+    :param bboxes: [(num_anchors, 4)]
     :param labels: default = None
     :param colors: default = None
     :return: None

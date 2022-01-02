@@ -20,7 +20,7 @@ classes_path = 'model_data/voc_classes.txt'
 classes, _ = get_classes(classes_path)
 
 VOCdevkit_path = 'VOCdevkit'
-VOCdevkit_sets = [('2007', 'trainval')]
+VOCdevkit_sets = [('2077', 'trainval'), ('2077', 'test')]
 
 def convert_annotation(_year, _image_id, _list_file):
     in_file = open(os.path.join(VOCdevkit_path, 'VOC%s/Annotations/%s.xml' % (_year, _image_id)), encoding='utf-8')
