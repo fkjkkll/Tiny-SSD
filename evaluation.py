@@ -35,11 +35,6 @@ if __name__ == "__main__":
     #-------------------------------------------------------#
     MINOVERLAP      = 0.5
     #-------------------------------------------------------#
-    #   map_vis用于指定是否开启VOC_map计算的可视化
-    #-------------------------------------------------------#
-    map_vis         = True
-    conf_threshold  = 0.3
-    #-------------------------------------------------------#
     #   指向VOC数据集所在的文件夹
     #   默认指向根目录下的VOC数据集
     #-------------------------------------------------------#
@@ -107,7 +102,7 @@ if __name__ == "__main__":
         get_map(MINOVERLAP, True, path = map_out_path)
 
         print("Save image results ...")
-        if map_vis:
+        if True:
             from PIL import ImageDraw, ImageFont
             font = ImageFont.truetype('Sundries/simhei.ttf', 20)
             for image_id in tqdm(image_ids):
@@ -127,7 +122,7 @@ if __name__ == "__main__":
                     painter.text((x1, y1), line[0], font=font)
                 for i, line in enumerate(pred_lines): # 画预测框
                     line = line.split()
-                    if float(line[1]) < conf_threshold: continue
+                    if float(line[1]) < 0.3: continue # 置信度阈值
                     x1, y1, x2, y2 = list(map(int, line[2:]))
                     painter.rectangle(((x1, y1), (x2, y2)), fill=None, outline='blue', width=1)
                     painter.text((x1, y1), f'{line[0]}:[{line[1]}]', font=font)

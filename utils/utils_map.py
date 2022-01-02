@@ -278,7 +278,7 @@ def get_map(MINOVERLAP, draw_plot, path = './map_out'):
     TEMP_FILES_PATH     = os.path.join(path, '.temp_files')
     RESULTS_FILES_PATH  = os.path.join(path, 'results')
 
-    show_animation = True
+    show_animation = False # !!!!!!!
     if os.path.exists(IMG_PATH): 
         for dirpath, dirnames, files in os.walk(IMG_PATH):
             if not files:
@@ -412,7 +412,9 @@ def get_map(MINOVERLAP, draw_plot, path = './map_out'):
     sum_AP = 0.0
     ap_dictionary = {}
     lamr_dictionary = {}
-    with open(RESULTS_FILES_PATH + "/results.txt", 'w') as results_file:
+
+    with open(os.path.join(RESULTS_FILES_PATH, "results.txt"), 'w') as results_file:
+    # with open(RESULTS_FILES_PATH + "/results.txt", 'w') as results_file:
         results_file.write("# AP and precision/recall per class\n")
         count_true_positives = {}
 
