@@ -11,8 +11,10 @@ An implementation of SSD
     2. run evaluation.py to evaluate your test set
 
 
-## Result
-
+## Result(My small toy face detection results)
+![结果1](https://github.com/fkjkkll/Tiny-SSD/blob/master/Sundries/result1.jpg)
+![结果2](https://github.com/fkjkkll/Tiny-SSD/blob/master/Sundries/result2.jpg)
+![结果3](https://github.com/fkjkkll/Tiny-SSD/blob/master/Sundries/result3.jpg)
 
 ## Reference
 1. [Dive into Deep Learning](https://github.com/d2l-ai/d2l-zh/blob/master/chapter_computer-vision/ssd.md)
