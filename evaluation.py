@@ -109,7 +109,7 @@ if __name__ == "__main__":
         print("Save image results ...")
         if map_vis:
             from PIL import ImageDraw, ImageFont
-            font = ImageFont.truetype('model_data/simhei.ttf', 20)
+            font = ImageFont.truetype('Sundries/simhei.ttf', 20)
             for image_id in tqdm(image_ids):
                 image_path = os.path.join(VOCdevkit_path, f"VOC{year}/JPEGImages/" + image_id + ".jpg")
                 image = Image.open(image_path)
