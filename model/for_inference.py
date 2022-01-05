@@ -48,8 +48,8 @@ def nms(boxes, scores, iou_threshold):
 
 def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5, object_threshold=0.1, max_object_num=100):
     """ 将网络的输出值转化为我们需要的信息
-    :param cls_probs: (bs, classes, anchors) -> (bs, 1+c, 5444) 背景+类别个数
-    :param offset_preds: (bs, anchors*4) -> (bs, 4 * 5444) -> (bs, 21776)
+    :param cls_probs: (bs, classes, anchors) -> (bs, 1+c, anchors) 背景+类别个数
+    :param offset_preds: (bs, anchors*4) -> (bs, 4 * anchors)
     :param anchors: (anchors, 4)
     :param nms_threshold: NMS阈值
     :param object_threshold: 预设的认为是目标的阈值
@@ -60,10 +60,10 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5, obje
     num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
     out = []
     for i in range(batch_size):
-        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4) # (2, 5444) (5444, 4)
+        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4) # ((1+c), anchors) (anchors, 4)
 
         # 取每个锚框对不同类的最大置信那个, 从1行开始表示不要背景(0行), conf大部分是很小的数(大数字在0行，指背景), 单类识别的话id全是0(因为就1行)
-        conf, class_id = torch.max(cls_prob[1:], axis=0) # (5444,) (5444,)
+        conf, class_id = torch.max(cls_prob[1:], axis=0) # (anchors,) (anchors,)
 
         # chose_idx指代的下标是 0~anchors-1
         chose_idx = torch.nonzero(conf>object_threshold).reshape(-1) # (chose1,) 第一次筛选

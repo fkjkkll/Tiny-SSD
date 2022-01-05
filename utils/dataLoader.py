@@ -110,7 +110,7 @@ class MyDataSet(Dataset):
             boxes = boxes[np.logical_and(box_w > 1, box_h > 1)]  # discard invalid box
             boxes[:, :4] = boxes[:, :4] / self.r  # 边界框大小被归一化为0~1
 
-        # image_data: (3, 256, 256), boxes: (o, 5) or (0,)
+        # image_data: (3, 320, 320), boxes: (o, 5) or (0,)
         # boxes: cx cy w h c
         # image_data -> tensor boxes -> array
         return image_data, boxes
@@ -123,8 +123,8 @@ class MyDataSet(Dataset):
 def dataset_collate(batch):
     """ DataLoader中collate_fn使用
     之所以需要传入这个参数，是因为dataloader返回img和boxes，但是每个图片的boxes不固定，所以要外面封装一层，使之形状固定
-    :param batch: list(tuple(tensor(3, 255, 255), ndarray(o, 5) or 没目标: ndarray([])))
-    :return: (bs, 3, 255, 255) (bs, 100, 5) 5: class xmin ymin xmax ymax
+    :param batch: list(tuple(tensor(3, 320, 320), ndarray(o, 5) or 没目标: ndarray([])))
+    :return: (bs, 3, 320, 320) (bs, 100, 5) 5: class xmin ymin xmax ymax
     """
     m = 100 # 限制一张图片最多存在100个目标
     images = []

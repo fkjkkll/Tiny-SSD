@@ -32,6 +32,14 @@ def get_anchor_info(path):
     anchor_infos = [list(map(float, c.strip().split())) for c in anchor_infos]
     return anchor_infos
 
+def get_image_size(path):
+    """ 获得输入图像尺寸
+    :param path: 文件路径
+    :return: int
+    """
+    with open(path, encoding='utf-8') as f:
+        r = f.readlines()
+    return int(r[0])
 
 def cvtColor(image):
     """ 将图像转换成RGB图像
@@ -50,7 +58,7 @@ def img_preprocessing(_img):
     :param _img: Image
     :return: tensor_img (C,H,W) 0~1
     """
-    r = 256
+    r = 320
     if hasattr(_img, 'size'): iw, ih = _img.size #
     else: iw, ih, _ = _img.shape
     scale = min(r / iw, r / ih)
@@ -194,7 +202,3 @@ class Animator:
             self.axes[0].plot(x, y, fmt)
         self.config_axes() # 之所以写成lambda，估计是不想在这里传参数
         plt.pause(0.1) # 由于单线程，不这样会卡住
-
-
-
-

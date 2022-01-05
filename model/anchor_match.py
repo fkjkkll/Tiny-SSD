@@ -35,12 +35,12 @@ def box_center_to_corner(boxes):
 
 def box_iou(boxes1, boxes2):
     """ 计算两组boxs之间的IOU
-    :param boxes1: (n, 4) n指预设的anchor的数量(5444)
+    :param boxes1: (n, 4) n指预设的anchor的数量(anchors)
     :param boxes2: (m, 4) m指预设的一幅图片最大目标数(o)
     :return: (n, m) 每个位置代表i,j对应的两个框的交并比
     """
     box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1]))  # 计算面积
-    areas1 = box_area(boxes1) # (5444,)
+    areas1 = box_area(boxes1) # (anchors,)
     areas2 = box_area(boxes2) # (o,)
 
     # 交集(利用了广播机制)
@@ -65,14 +65,14 @@ def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
     num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
 
     # 位于第i行和第j列的元素 x_ij 是锚框i和真实边界框j的IoU
-    jaccard = box_iou(anchors, ground_truth) # (5444, o)
+    jaccard = box_iou(anchors, ground_truth) # (anchors, o)
 
     # 记录给每个锚框分配的真实目标(0~o-1)的下标， 没分配就是-1
-    anchors_bbox_map = torch.full((num_anchors,), -1, dtype=torch.long, device=device) # (5444,)
+    anchors_bbox_map = torch.full((num_anchors,), -1, dtype=torch.long, device=device) # (anchors,)
 
     # ------------------------ 先为大于IOU阈值的anchor分配gt --------------------------
     # 根据阈值，决定是否分配真实边界框 alloc_gt值(0 ~ o-1)o是该图片真实存在多少目标，大部分都是0(因为没有与目标交集，IOU=0，取max就是第一位:0)
-    max_ious, alloc_gt = torch.max(jaccard, dim=1) # (5444,) (5444,)
+    max_ious, alloc_gt = torch.max(jaccard, dim=1) # (anchors,) (anchors,)
     active_index = max_ious >= iou_threshold
     anchors_bbox_map[active_index] = alloc_gt[active_index]
 
@@ -109,9 +109,9 @@ def multibox_target(anchors, labels):
     :param anchors: (anchors, 4)
     :param labels: (bs, 100, 5) 100是该副图片中预设的最多有多少目标 5是 class minx miny maxx maxy
     :return: 一个元组，包含3个部分：
-    bbox_offset: (bs, 21776)
-    bbox_mask: (bs, 21776) 里面元素非0即1
-    class_labels: (bs, 5444) 代表着类别，0是背景
+    bbox_offset: (bs, anchors*4)
+    bbox_mask: (bs, anchors*4) 里面元素非0即1
+    class_labels: (bs, anchors) 代表着类别，0是背景
     """
     batch_size = labels.shape[0]
     batch_offset, batch_mask, batch_class_labels = [], [], []
@@ -125,27 +125,27 @@ def multibox_target(anchors, labels):
             # indices must be long, byte or bool tensors
             batch_class_labels.append(torch.zeros((num_anchors,), dtype=torch.long, device=device))
         else: # 当含有目标时
-            anchor_map_object = assign_anchor_to_bbox(label[:, 1:], anchors, device) # (5444,)
-            bbox_mask = ((anchor_map_object >= 0).float().unsqueeze(-1)).repeat(1, 4) # (5444, 4)
+            anchor_map_object = assign_anchor_to_bbox(label[:, 1:], anchors, device) # (anchors,)
+            bbox_mask = ((anchor_map_object >= 0).float().unsqueeze(-1)).repeat(1, 4) # (anchors, 4)
 
             # 初始化[分配的类别]和[分配的边界框坐标]: 所以0是背景类
-            assigned_cls = torch.zeros(num_anchors, dtype=torch.long, device=device) # (5444,)
-            assigned_bb = torch.zeros((num_anchors, 4), dtype=torch.float32, device=device) # (5444, 4)
+            assigned_cls = torch.zeros(num_anchors, dtype=torch.long, device=device) # (anchors,)
+            assigned_bb = torch.zeros((num_anchors, 4), dtype=torch.float32, device=device) # (anchors, 4)
 
             # 使用真实边界框来标记锚框的类别
             # 如果一个锚框没有被分配，我们标记其为背景（值为0）
             active_indices = torch.nonzero(anchor_map_object >= 0) # (active_anchors, 1)
             assigned_object_idx = anchor_map_object[active_indices] # (active_anchors, 1)
-            assigned_cls[active_indices] = label[assigned_object_idx, 0].long() + 1 # (5444,) 背景类是0，txt中0类变为1 (!!!)
-            assigned_bb[active_indices] = label[assigned_object_idx, 1:] # (5444, 4)
+            assigned_cls[active_indices] = label[assigned_object_idx, 0].long() + 1 # (anchors,) 背景类是0，txt中0类变为1 (!!!)
+            assigned_bb[active_indices] = label[assigned_object_idx, 1:] # (anchors, 4)
 
             # 偏移量转换 (预测是: cx cy w h的偏移量)
             # 这里面只有active_anchors个锚框是有效的，用的时候要乘以bbox_mask (!!!)
             offset = offset_boxes(anchors, assigned_bb)
 
-            batch_offset.append(offset.reshape(-1)) # (5444*4,)
-            batch_mask.append(bbox_mask.reshape(-1)) # (5444*4,)
-            batch_class_labels.append(assigned_cls) # (5444,)
+            batch_offset.append(offset.reshape(-1)) # (anchors*4,)
+            batch_mask.append(bbox_mask.reshape(-1)) # (anchors*4,)
+            batch_class_labels.append(assigned_cls) # (anchors,)
 
-    # (bs, 5444*4) (bs, 5444*4) (bs, 5444)
+    # (bs, anchors*4) (bs, anchors*4) (bs, anchors)
     return torch.stack(batch_offset), torch.stack(batch_mask), torch.stack(batch_class_labels)

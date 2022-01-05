@@ -8,17 +8,17 @@ from torch.nn import functional as F
 from model.anchor_generate import generate_anchors
 from model.for_inference import multibox_detection
 from model.net import TinySSD
-from utils.tools import get_classes, get_anchor_info, try_gpu, img_preprocessing
+from utils.tools import get_classes, get_anchor_info, try_gpu, img_preprocessing, get_image_size
 import os
 
 class Tiny_SSD(object):
     _defaults = {
         "anchor_sizes_path": 'model_data/anchor_sizes.txt',
         "anchor_ratios_path": 'model_data/anchor_ratios.txt',
+        "image_size_path":'model_data/image_size.txt',
         "model_path": 'model_data/result.pt',
         "classes_path": 'model_data/voc_classes.txt',
-        "r": 256,
-        "nms_threshold": 0.1,
+        "nms_threshold": 0.3,
     }
 
     @classmethod
@@ -33,32 +33,29 @@ class Tiny_SSD(object):
         for name, value in kwargs.items():
             setattr(self, name, value)
 
-        if isTraining:
-            pass
-        else:
-            self.sizes = get_anchor_info(self.anchor_sizes_path)
-            self.ratios = get_anchor_info(self.anchor_ratios_path)
+        self.sizes = get_anchor_info(self.anchor_sizes_path)
+        self.ratios = get_anchor_info(self.anchor_ratios_path)
+        self.r = get_image_size(self.image_size_path)
+        self.feature_map = [self.r // 8, self.r // 16, self.r // 32, self.r // 64, 1]
+        # -----------------------------------------------
+        #                   产生先验锚框
+        # -----------------------------------------------
+        if len(self.sizes) != len(self.ratios):
+            self.ratios = [self.ratios[0]] * len(self.sizes)
+        self.anchors_perpixel = len(self.sizes[0]) + len(self.ratios[0]) - 1
+        self.anchors = generate_anchors(self.feature_map, self.sizes, self.ratios)
 
-            # -----------------------------------------------
-            #                   产生先验锚框
-            # -----------------------------------------------
-            if len(self.sizes) != len(self.ratios):
-                self.ratios = [self.ratios[0]] * len(self.sizes)
-            self.anchors_perpixel = len(self.sizes[0]) + len(self.ratios[0]) - 1
-            feature_map = [32, 16, 8, 4, 1]
-            self.anchors = generate_anchors(feature_map, self.sizes, self.ratios)
+        # -----------------------------------------------
+        #                   加载网络
+        # -----------------------------------------------
+        self.name_classes, self.num_classes = get_classes(self.classes_path)
+        self.device, self.net = try_gpu(), TinySSD(app=self.anchors_perpixel, cn=self.num_classes)
+        self.net.load_state_dict(torch.load(self.model_path))
 
-            # -----------------------------------------------
-            #                   加载网络
-            # -----------------------------------------------
-            self.name_classes, self.num_classes = get_classes(self.classes_path)
-            self.device, self.net = try_gpu(), TinySSD(anchors_perpixel=self.anchors_perpixel, num_classes=self.num_classes)
-            self.net.load_state_dict(torch.load(self.model_path))
-
-            # 放入GPU，开启评估模式
-            self.anchors = self.anchors.to(self.device)
-            self.net = self.net.to(self.device)
-            self.net.eval()
+        # 放入GPU，开启评估模式
+        self.anchors = self.anchors.to(self.device)
+        self.net = self.net.to(self.device)
+        self.net.eval()
 
 
     def inference(self, image):
@@ -67,11 +64,11 @@ class Tiny_SSD(object):
         :return: list -> (chose, 10): class conf bbx bby bbx bby anx any anx any
         """
         iw, ih = image.size  # 返回的居然是(w, h)
-        image = img_preprocessing(image).unsqueeze(0)  # (1, 3, 255, 255)
+        image = img_preprocessing(image).unsqueeze(0)  # (1, 3, r, r)
         with torch.no_grad():
-            cls_preds, bbox_preds = self.net(image.to(self.device))  # (1, 5444, 2) (1, 5444*4)
-            cls_probs = F.softmax(cls_preds, dim=2).permute(0, 2, 1)  # (1, 2, 5444)
-            output = multibox_detection(cls_probs, bbox_preds, self.anchors, self.nms_threshold)  # (1, 5444, 10)
+            cls_preds, bbox_preds = self.net(image.to(self.device))  # (1, anchors, (1+c)) (1, anchors*4)
+            cls_probs = F.softmax(cls_preds, dim=2).permute(0, 2, 1)  # (1, (1+c), anchors)
+            output = multibox_detection(cls_probs, bbox_preds, self.anchors, self.nms_threshold)  # (1, anchors, 10)
             idx = [i for i, row in enumerate(output[0]) if row[0]>=0] # 排除背景
             result = output[0, idx]  # (chose, 10): class conf bbx bby bbx bby anx any anx any
 
@@ -79,7 +76,7 @@ class Tiny_SSD(object):
             scale = min(self.r / ih, self.r / iw)
             dx = (self.r - round(iw * scale)) // 2  # 这俩有一个为0
             dy = (self.r - round(ih * scale)) // 2  # 这俩有一个为0
-            result[:, 2:] *= 256
+            result[:, 2:] *= self.r
             result[:, [2, 4, 6, 8]] -= dx # bbxmin bbxmax anxmin anxmax
             result[:, [3, 5, 7, 9]] -= dy # bbymin bbymax anymin anymax
             result[:, 2:] /= scale

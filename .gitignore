@@ -10,4 +10,5 @@ __pycache__/
 
 !VOCdevkit/test.jpg
 !model_data/*.txt
+!model_data/result.pt
 !Sundries/*.jpg

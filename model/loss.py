@@ -10,8 +10,8 @@ import torch
 
 def focal_loss(cls_preds, cls_labels, gamma=2):
     """ 计算类别损失
-    :param cls_preds: (bs, 5444, 1+c)
-    :param cls_labels: (bs, 5444)
+    :param cls_preds: (bs, anchors, 1+c)
+    :param cls_labels: (bs, anchors)
     :param gamma: int default->2
     :return: (bs,)
     """
@@ -26,29 +26,29 @@ def focal_loss(cls_preds, cls_labels, gamma=2):
 
 def smooth_l1_loss(bbox_preds, bbox_labels, bbox_masks, sigma=1):
     """ 计算类边框损失
-    :param bbox_preds: (bs, 5444*4)
-    :param bbox_labels: (bs, 5444*4)
-    :param bbox_masks: (bs, 5444*4)
+    :param bbox_preds: (bs, anchors*4)
+    :param bbox_labels: (bs, anchors*4)
+    :param bbox_masks: (bs, anchors*4)
     :param sigma: int default->1
     :return: (bs,)
     """
     bbox_preds = bbox_preds * bbox_masks
     bbox_labels = bbox_labels * bbox_masks
-    active_anchors = bbox_masks.sum(axis=1) / 4 + 1e-5
+    active_items = bbox_masks.sum(axis=1) + 1e-5
     beta = 1. / (sigma ** 2)
     diff = torch.abs(bbox_preds - bbox_labels)
     cond = diff < beta
     loss = torch.where(cond, 0.5 * diff ** 2 / beta, diff - 0.5 * beta)
-    return torch.sum(loss, dim=1) / active_anchors
+    return torch.sum(loss, dim=1) / active_items
 
 
-def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks, alpha = 0.003):
+def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks, alpha = 0.01):
     """ 总体损失函数
-    :param cls_preds: (bs, 5444, 1+c)
-    :param cls_labels: (bs, 5444)
-    :param bbox_preds: (bs, 5444*4)
-    :param bbox_labels: (bs, 5444*4)
-    :param bbox_masks: (bs, 5444*4)
+    :param cls_preds: (bs, anchors, 1+c)
+    :param cls_labels: (bs, anchors)
+    :param bbox_preds: (bs, anchors*4)
+    :param bbox_labels: (bs, anchors*4)
+    :param bbox_masks: (bs, anchors*4)
     :param alpha: 平衡类别损失与边框损失的系数
     :return: int
     """
@@ -60,19 +60,19 @@ def calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels, bbox_masks, alpha 
 @torch.no_grad()
 def cls_eval(cls_preds, cls_labels):
     """ 类别分类损失评估
-    :param cls_preds: (bs, 5444, 1+c)
-    :param cls_labels: (bs, 5444)
+    :param cls_preds: (bs, anchors, 1+c)
+    :param cls_labels: (bs, anchors)
     :return: int
     """
     return focal_loss(cls_preds, cls_labels).mean()
 
 
 @torch.no_grad()
-def bbox_eval(bbox_preds, bbox_labels, bbox_masks, alpha = 0.003):
+def bbox_eval(bbox_preds, bbox_labels, bbox_masks, alpha = 0.01):
     """ 边框回归损失评估
-    :param bbox_preds: (bs, 5444*4)
-    :param bbox_labels: (bs, 5444*4)
-    :param bbox_masks: (bs, 5444*4)
+    :param bbox_preds: (bs, anchors*4)
+    :param bbox_labels: (bs, anchors*4)
+    :param bbox_masks: (bs, anchors*4)
     :param alpha: 平衡类别损失与边框损失的系数
     :return: int
     """

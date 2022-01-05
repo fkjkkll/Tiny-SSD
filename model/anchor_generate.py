@@ -56,7 +56,7 @@ def generate_anchors(fmp_list, sizes, ratios):
     :param fmp_list: 各层输出的特征图大小(只能是方图)，例如[32,16,8,4,1]
     :param sizes: 各层锚框尺度，例如[[0.1, 0.15], [0.25, 0.3], [0.35, 0.4], [0.5, 0.6], [0.7, 0.9]]
     :param ratios: 各层锚框长宽比，例如[[1, 2, 0.5]] * 5
-    :return: 汇合所有锚框组成(N, 4)，例如tensor.shape = (5444, 4): 4096 + 1024 + 256 + 64 + 4
+    :return: 汇合所有锚框组成(N, 4)，例如tensor.shape = (anchors, 4):
     """
     anchors = [None]*len(fmp_list)
     for i, fmp in enumerate(fmp_list):
@@ -68,28 +68,9 @@ def generate_anchors(fmp_list, sizes, ratios):
 if __name__ == '__main__':
     import numpy as np
     import matplotlib.pyplot as plt
-    from utils.tools import show_bboxes
     from utils.tools import *
 
-    def img_preprocessing(_img):
-        r = 256
-        if hasattr(_img, 'size'):
-            iw, ih = _img.size  #
-        else:
-            iw, ih, _ = _img.shape
-        scale = min(r / iw, r / ih)
-        nw = round(iw * scale)
-        nh = round(ih * scale)
-        dx = (r - nw) // 2  # 这俩有一个为0
-        dy = (r - nh) // 2  # 这俩有一个为0
-        _img = _img.resize((nw, nh), Image.BILINEAR)
-        new_image = Image.new('RGB', (r, r), (128, 128, 128))
-        new_image.paste(_img, (dx, dy))
-        transform = transforms.Compose([
-            transforms.ToTensor(),  # PIL -> tensor [0~1]
-        ])
-        return transform(new_image)
-
+    r = get_image_size('../model_data/image_size.txt')
     img = Image.open('../VOCdevkit/test.jpg').convert('RGB')
     img = img_preprocessing(img)
     fh, fw = 1, 1
@@ -97,10 +78,10 @@ if __name__ == '__main__':
     X = torch.rand(size=(1, 1, fh, fw))
     anchor_sizes = get_anchor_info('../model_data/anchor_sizes.txt')
     anchor_ratios = get_anchor_info('../model_data/anchor_ratios.txt')
-    anchors_boxes = multibox_prior(X, anchor_sizes[1], anchor_ratios[0])
+    anchors_boxes = multibox_prior(X, anchor_sizes[4], anchor_ratios[0])
 
     index = np.random.choice(fw*fh*4, 50)
     fig = plt.imshow(img.permute(1,2,0))
-    show_bboxes(fig.axes, anchors_boxes[index] * 256)
+    show_bboxes(fig.axes, anchors_boxes[index] * r)
 
     pass
