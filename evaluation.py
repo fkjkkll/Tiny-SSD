@@ -102,7 +102,7 @@ if __name__ == "__main__":
         mAP = get_map(MINOVERLAP, True, path = map_out_path)
 
         print("Save image results ...")
-        if mAP > 0.7:
+        if mAP > 0.8:
             from PIL import ImageDraw, ImageFont
             font = ImageFont.truetype('Sundries/simhei.ttf', 20)
             for image_id in tqdm(image_ids):

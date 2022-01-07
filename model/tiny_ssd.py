@@ -64,7 +64,7 @@ class Tiny_SSD(object):
         :return: list -> (chose, 10): class conf bbx bby bbx bby anx any anx any
         """
         iw, ih = image.size  # 返回的居然是(w, h)
-        image = img_preprocessing(image).unsqueeze(0)  # (1, 3, r, r)
+        image = img_preprocessing(image, self.r).unsqueeze(0)  # (1, 3, r, r)
         with torch.no_grad():
             cls_preds, bbox_preds = self.net(image.to(self.device))  # (1, anchors, (1+c)) (1, anchors*4)
             cls_probs = F.softmax(cls_preds, dim=2).permute(0, 2, 1)  # (1, (1+c), anchors)

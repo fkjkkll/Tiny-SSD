@@ -48,13 +48,19 @@ anchors = generate_anchors(feature_map, sizes, ratios) # (1600+400+100+25+1)*4�
 #                    网络部分
 # -----------------------------------------------
 device, net = try_gpu(), TinySSD(app=anchors_perpixel, cn=num_classes)
-trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
-scheduler_lr = torch.optim.lr_scheduler.CosineAnnealingLR(trainer, 200)
+try:
+    net.load_state_dict(torch.load('model_data/result.pt'))
+    print("微调...")
+except:
+    print("从头训练...")
+# trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
+trainer = torch.optim.Adam(net.parameters(), lr=0.03, weight_decay=5e-5)
+scheduler_lr = torch.optim.lr_scheduler.CosineAnnealingLR(trainer, 100)
 
 # -----------------------------------------------
 #                    开始训练
 # -----------------------------------------------
-num_epochs, timer = 1000, Timer()
+num_epochs, timer = 300, Timer()
 timer.start()
 animator = Animator(xlabel='epoch', xlim=[1, num_epochs], legend=['class error', 'bbox mae'])
 net = net.to(device)

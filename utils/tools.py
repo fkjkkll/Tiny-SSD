@@ -53,12 +53,13 @@ def cvtColor(image):
         return image
 
 
-def img_preprocessing(_img):
+def img_preprocessing(_img, img_sz):
     """ 用于inference，Image(H,W,C) -> (C,H,W) 0~1
     :param _img: Image
+    :param img_sz: 输入网络的图像边长
     :return: tensor_img (C,H,W) 0~1
     """
-    r = 320
+    r = img_sz
     if hasattr(_img, 'size'): iw, ih = _img.size #
     else: iw, ih, _ = _img.shape
     scale = min(r / iw, r / ih)

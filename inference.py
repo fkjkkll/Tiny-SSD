@@ -55,10 +55,10 @@ except KeyboardInterrupt:
 # -----------------------------------------------
 #                     图片
 # -----------------------------------------------
-# image = Image.open('VOCdevkit/test.jpg').convert('RGB')
-# ssd = Tiny_SSD()
-# output = ssd.inference(image)
-# showres(image, output, 0.3, ssd.name_classes)
+image = Image.open('VOCdevkit/test.jpg').convert('RGB')
+ssd = Tiny_SSD()
+output = ssd.inference(image)
+showres(image, output, 0.3, ssd.name_classes)
 
 
 
